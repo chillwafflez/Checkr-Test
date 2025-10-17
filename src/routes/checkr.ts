@@ -14,22 +14,38 @@ router.get("/", async(req, res) => {
 
 // called by Checkr when a report has been updated to complete
 router.post("/webhook", async (req, res) => {
-  const event = req.body as CheckrEvent<CheckrReport>;
+  console.log("CHECKR WEBHOOK CALLED");
+  try {
+    // verify signature
+    // const sigHeader = req.header("X-Checkr-Signature") || "";
 
-  if (event.type === "report.completed") {
-    const status = event.data.object.result === "clear" ? "success" : "error";
-    const id = event.data.object.candidate_id;
-    console.log("event id " + event.id)
-    console.log("id of report that was completed = " + id);
+    const event = req.body as CheckrEvent<CheckrReport>;
 
 
-    // await notifyUser(status);
-    // await notifyAdmins(status);
-  } else {
-    throw new Error(`Unhandled event type ${event.type}.`);
+    if (event.type === "report.completed") {
+      const status = event.data.object.result === "clear" ? "success" : "error";
+      const reportID = event.data.object.id;
+      const candidateID = event.data.object.candidate_id;
+      console.log("event id " + event.id)
+      console.log("report id (the one that was completed) = " + reportID);
+      console.log("status of report = " + status);
+      console.log("candidate id = " + candidateID);
+
+
+
+      // await notifyUser(status);
+      // await notifyAdmins(status);
+
+    } else {
+      throw new Error(`Unhandled event type ${event.type}.`);
+    }
+
+    // ALWAYS send back 200 status code regardless of success or failure
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("checkr webhook uh oh: ", err);
+    res.sendStatus(200);
   }
-
-  res.send();
 });
 
 export default router;
