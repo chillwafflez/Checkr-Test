@@ -1,6 +1,6 @@
 import express from "express";
 import type { CheckrEvent, CheckrReport } from "../utils/checkr.ts";
-import sendEmail from "../utils/send-email.ts";
+import sendEmail from "../utils/send-email.js";
 
 const router = express.Router();
 

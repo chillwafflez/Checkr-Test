@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import CheckrRoute from "./routes/checkr.ts";
+import CheckrRoute from "./routes/checkr.js";
 
 const app = express();
 const port = 8080;
