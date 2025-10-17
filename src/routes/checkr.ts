@@ -9,6 +9,7 @@ const lastName = "bruh";
 const email = "skibidiyuh@gmail.com"
 
 router.get("/", async(req, res) => {
+  console.log("base / in checkr routes called");
   res.json({ "bruh": "yippee" });
 })
 
