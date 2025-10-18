@@ -4,7 +4,7 @@ import sendEmail from "../utils/send-email.js";
 import { verifyCheckrSignature } from "../utils/verify-signature.js";
 
 const router = express.Router();
-const CHECKR_SECRET = process.env.CHECKR_WEBHOOK_SECRET!;
+const CHECKR_SECRET = process.env.CHECKR_KEY!;
 
 
 const firstName = "yippee";
