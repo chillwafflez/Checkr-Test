@@ -4,6 +4,8 @@ import sendEmail from "../utils/send-email.js";
 import { verifyCheckrSignature } from "../utils/verify-signature.js";
 
 const router = express.Router();
+const CHECKR_SECRET = process.env.CHECKR_WEBHOOK_SECRET!;
+
 
 const firstName = "yippee";
 const lastName = "bruh";
@@ -15,37 +17,42 @@ router.get("/", async(req, res) => {
 })
 
 // called by Checkr when a report has been updated to complete
-router.post("/webhook", async (req, res) => {
+router.post("/webhook",
+  express.raw({ type: "application/json" }),  // app.use(express.json()) parses all incoming JSON, but for verification we want the raw bytes
+  async (req, res) => {
+
   console.log("CHECKR WEBHOOK CALLED");
   try {
     // verify signature
-    const sigHeader = req.header("X-Checkr-Signature") || "";
-    console.log("header: ", sigHeader);
+    const signature = req.header("X-Checkr-Signature") || "";
+    const verified = verifyCheckrSignature(CHECKR_SECRET, req.body as Buffer, signature)
+    if (!verified) throw new Error("Checkr signature doesn't match");
 
+    console.log("SIGNATURE VERIFIED");
+    console.log(req.body);
 
-    const event = req.body as CheckrEvent<CheckrReport>;
+    // const event = req.body as CheckrEvent<CheckrReport>;
+    // if (event.type === "report.created") {
+    //   const candidateID = event.data.object.candidate_id;
+    //   const reportID = event.data.object.id;
+    //   console.log("report created for candidateID = " + candidateID);
+    //   console.log("new report ID = " + reportID);
 
-    if (event.type === "report.created") {
-      const candidateID = event.data.object.candidate_id;
-      const reportID = event.data.object.id;
-      console.log("report created for candidateID = " + candidateID);
-      console.log("new report ID = " + reportID);
+    // } else if (event.type === "report.completed") {
+    //   const status = event.data.object.result === "clear" ? "success" : "error";
+    //   const reportID = event.data.object.id;
+    //   const candidateID = event.data.object.candidate_id;
+    //   console.log("event id " + event.id)
+    //   console.log("report id (the one that was completed) = " + reportID);
+    //   console.log("report status = " + status);
+    //   console.log("candidate id = " + candidateID);
 
-    } else if (event.type === "report.completed") {
-      const status = event.data.object.result === "clear" ? "success" : "error";
-      const reportID = event.data.object.id;
-      const candidateID = event.data.object.candidate_id;
-      console.log("event id " + event.id)
-      console.log("report id (the one that was completed) = " + reportID);
-      console.log("report status = " + status);
-      console.log("candidate id = " + candidateID);
+    //   // await notifyUser(status);
+    //   // await notifyAdmins(status);
 
-      // await notifyUser(status);
-      // await notifyAdmins(status);
-
-    } else {
-      throw new Error(`Unhandled event type ${event.type}.`);
-    }
+    // } else {
+    //   throw new Error(`Unhandled event type ${event.type}.`);
+    // }
 
     // ALWAYS send back 200 status code regardless of success or failure
     res.sendStatus(200);

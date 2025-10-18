@@ -1,8 +1,10 @@
 import crypto from 'crypto';
 
-export const verifyCheckrSignature = (secret: crypto.BinaryLike, compactJSON: crypto.BinaryLike, signature: any) => {
-  const hmac = crypto.createHmac('sha256', secret);
-  const computedHash = hmac.update(compactJSON).digest('hex')
+export const verifyCheckrSignature = (secret: string, compactJsonPayload: Buffer, signature?: string) => {
+  if (!signature) return false;
 
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedHash))
+  const hmac = crypto.createHmac("sha256", secret)
+  const computedHash = hmac.update(compactJsonPayload).digest("hex");
+
+  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(computedHash, "hex"))
 }
