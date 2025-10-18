@@ -20,28 +20,22 @@ router.post("/webhook", async (req, res) => {
     // verify signature
     // const sigHeader = req.header("X-Checkr-Signature") || "";
 
-    // const event = req.body as CheckrEvent<CheckrReport>;
-    const event = JSON.parse(req.body.toString("utf8"));
-    const eventType: string = event?.type;
-
+    const event = req.body as CheckrEvent<CheckrReport>;
 
     if (event.type === "report.completed") {
-      // const status = event.data.object.result === "clear" ? "success" : "error";
-      // const reportID = event.data.object.id;
-      // const candidateID = event.data.object.candidate_id;
-      // console.log("event id " + event.id)
-      // console.log("report id (the one that was completed) = " + reportID);
-      // console.log("status of report = " + status);
-      // console.log("candidate id = " + candidateID);
-
-
+      const status = event.data.object.result === "clear" ? "success" : "error";
+      const reportID = event.data.object.id;
+      const candidateID = event.data.object.candidate_id;
+      console.log("event id " + event.id)
+      console.log("report id (the one that was completed) = " + reportID);
+      console.log("status of report = " + status);
+      console.log("candidate id = " + candidateID);
 
       // await notifyUser(status);
       // await notifyAdmins(status);
 
     } else {
-      // throw new Error(`Unhandled event type ${event.type}.`);
-      throw new Error(`Unhandled event type ${eventType}.`);
+      throw new Error(`Unhandled event type ${event.type}.`);
     }
 
     // ALWAYS send back 200 status code regardless of success or failure

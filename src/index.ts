@@ -12,6 +12,7 @@ app.get("/", (_req, res) => {
   res.json({ ok: true, uptime: process.uptime() });
 });
 
+app.use(express.json());
 app.use("/v1/checkr", CheckrRoute);
 
 app.listen(port, () => {
