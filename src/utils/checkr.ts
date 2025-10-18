@@ -27,7 +27,8 @@ export interface CheckrReport {
   received_at: string;
   status: "pending" | "complete" | "suspended" | "dispute" | "canceled";
   result: "clear" | "consider" | null;
-  package: "driver_pro";
+  // package: "driver_pro";
+  package: string;
   source: "api";
   candidate_id: string;
   ssn_trace_id: string;
