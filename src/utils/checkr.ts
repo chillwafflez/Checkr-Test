@@ -1,5 +1,6 @@
-// checkr passes an event to our webhook which can signify an event related
-// to a candidate being created or report being completed
+import crypto from 'crypto';
+
+// checkr passes an event to our webhook which can signify an event related to a candidate being created or report being completed
 export interface CheckrEvent<T> {
   id: string;
   object: "event";
@@ -27,16 +28,15 @@ export interface CheckrReport {
   received_at: string;
   status: "pending" | "complete" | "suspended" | "dispute" | "canceled";
   result: "clear" | "consider" | null;
-  // package: "driver_pro";
   package: string;
-  source: "api";
   candidate_id: string;
-  ssn_trace_id: string;
-  sex_offender_search_id: string;
-  national_criminal_search_id: string;
-  county_criminal_search_ids: string[];
-  state_criminal_search_ids: string[];
-  motor_vehicle_report_id: string;
+  // screenings
+  ssn_trace_id?: string;
+  sex_offender_search_id?: string;
+  national_criminal_search_id?: string;
+  county_criminal_search_ids?: string[];
+  state_criminal_search_ids?: string[];
+  motor_vehicle_report_id?: string;
 }
 
 export const createCandidate = async (
@@ -44,7 +44,6 @@ export const createCandidate = async (
   lastName: string,
   email: string
 ) => {
-  console.log("(createCandidate checkr.ts) created Candidate for " + firstName);
   const encoded = Buffer.from(`${process.env.CHECKR_KEY!}:`).toString("base64");
 
   const body = new URLSearchParams();
@@ -72,11 +71,19 @@ export const createCandidate = async (
   return data as CheckrCandidate;
 };
 
-// create an mock report for a candidate 
-export const createMockReport = async (candidateId: string) => {
-  const packageSlug = "essential";  // use the essential one for now
+// verify the encrypted signature Checkr provides
+export const verifyCheckrSignature = (secret: string, compactJsonPayload: Buffer, signature?: string) => {
+  if (!signature) return false;
 
-  // api key
+  const hmac = crypto.createHmac("sha256", secret)
+  const computedHash = hmac.update(compactJsonPayload).digest("hex");
+
+  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(computedHash, "hex"))
+}
+
+export const createMockReport = async (candidateId: string) => {
+  const packageSlug = "essential";  // use the 'essential' package for now
+
   const encoded = Buffer.from(`${process.env.CHECKR_KEY!}:`).toString("base64");
 
   const body = new URLSearchParams();
@@ -94,7 +101,7 @@ export const createMockReport = async (candidateId: string) => {
 
   if (!response.ok) {
     const data = await response.json();
-    console.log("UH OH COULDNT CREATE MOCK REPORT FOR USER");
+    console.log("unable to create mock report for user");
     console.log(JSON.stringify(data));
   }
 
