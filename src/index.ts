@@ -1,9 +1,12 @@
 import express from "express";
 import cors from "cors";
-import CheckrRoute from "./routes/checkr.js";
+// import CheckrRoute from "./routes/checkr.js";
 import UserModel from "./models/user.js";
 import sendEmail from "./utils/send-email.js";
-import { CheckrEvent, CheckrReport, verifyCheckrSignature } from "./utils/checkr.js";
+import { CheckrEvent, CheckrInvitation, CheckrReport, createCandidate, createInvitation, verifyCheckrSignature } from "./utils/checkr.js";
+import dotenv from "dotenv";
+dotenv.config();
+
 
 const app = express();
 const port = process.env.PORT || 8080 
@@ -12,9 +15,8 @@ app.use(cors());
 
 app.get("/", (_req, res) => {
   console.log("base / called");
-  res.json({ ok: true, uptime: process.uptime() });
+  res.json({ hi: "skibidi" });
 });
-
 
 const notifyUser = async (user: UserModel, status: "error" | "success") => {
   const subject = "Background Check Update";
@@ -87,6 +89,38 @@ const notifyAdmins = async (user: UserModel, status: "error" | "success") => {
   await sendEmail(to, subject, html);
 };
 
+// ------------ FOR TESTING ----------------- //
+app.post("/create-test-candidate", async (req, res) => {
+  const candidate = await createCandidate(
+    "Yuta",
+    "Zenin",
+    "skibidiyuh1738@gmail.com",
+    "California",
+    "US"
+  );
+
+  const checkr_candidate_id = candidate.id;
+  console.log("Created Checkr candidate's ID: " + checkr_candidate_id);
+  res.json({ createdCandidate: checkr_candidate_id});
+})
+
+
+app.post("/create-test-invitation", async (req, res) => {
+  try {
+    const invitation = await createInvitation(
+      process.env.BUD_RICHMAN_CANDIDATE_ID!,
+      "essential",
+      "New York",
+      "US"
+    );
+
+    res.json(invitation);
+  } catch (err) {
+    console.error("Invitation failed:", err);
+    res.status(400).json({ error: err instanceof Error ? err.message : err });
+  }
+})
+
 
 // app.use("/v1/checkr", CheckrRoute);
 app.post(
@@ -105,17 +139,60 @@ app.post(
 
       
       const raw = req.body as Buffer;
-      const event = JSON.parse(raw.toString("utf8")) as CheckrEvent<CheckrReport>;
+      const event = JSON.parse(raw.toString("utf8")) as 
+        | CheckrEvent<CheckrReport>
+        | CheckrEvent<CheckrInvitation>;
+
+      if (
+        event.type === "invitation.created" ||
+        event.type === "invitation.completed" ||
+        event.type === "invitation.expired" ||
+        event.type === "invitation.deleted"
+      ) {
+        const invitation = event.data.object as CheckrInvitation;
+        const invitationID = invitation.id;
+        const candidateID = invitation.candidate_id;
+
+        console.log(
+          `invitation webhook: ${event.type} (invitationID=${invitation.id}, candidateID=${candidateID})`
+        );
+
+        let status: string | null = null;
+        if (event.type === "invitation.created") {
+          console.log(`invitation created for candidateID = ${candidateID} | invitation ID = ${invitationID}`);
+          status = "invitation_created";
+        } else if (event.type === "invitation.completed") {
+          console.log(`invitation completed for candidateID = ${candidateID}`);
+          status = "invitation_completed";
+        } else if (event.type === "invitation.expired") {
+          console.log(`invitation expired for candidateID = ${candidateID}`);
+          status = "invitation_expired";
+        } else if (event.type === "invitation.deleted") {
+          console.log(`invitation deleted for candidateID = ${candidateID}`);
+          status = "invitation_deleted";
+        }
+
+        if (status) {
+          // await db.query(
+          //   "UPDATE users SET checkr_status = $1 WHERE checkr_candidate = $2",
+          //   [status, candidateID]
+          // );
+        }
+
+        return;
+      }
 
       if (event.type === "report.created") {
-        const candidateID = event.data.object.candidate_id;
-        const reportID = event.data.object.id;
+        const report = event.data.object as CheckrReport;
+        const candidateID = report.candidate_id;
+        const reportID = report.id;
         console.log(`new report (reportID = ${reportID}) created for candidateID = ${candidateID}`)
       } else if (event.type === "report.completed") {
-        const status = event.data.object.result === "clear" ? "success" : "error";
-        const reportID = event.data.object.id;
-        const candidateID = event.data.object.candidate_id;
-        console.log(`report completed (id = ${reportID}) = candidateID = ${candidateID}`);
+        const report = event.data.object as CheckrReport;
+        const status = report.result === "clear" ? "success" : "error";
+        const reportID = report.id;
+        const candidateID = report.candidate_id;
+        console.log(`report completed (id = ${reportID}) = candidateID = ${candidateID} | status = ${status}`);
 
         // await db.query(
         //   "UPDATE users SET checkr_status = $1 WHERE checkr_candidate = $2",
@@ -144,6 +221,8 @@ app.post(
   }
 );
 app.use(express.json());
+
+// app.use("/v1/checkr", CheckrRoute);
 
 app.listen(port, () => {
   console.log(`Listening on port ${port.toString()}`);
